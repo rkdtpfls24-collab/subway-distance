@@ -19,7 +19,7 @@
         .hint-text { font-size: 12px; color: var(--primary-color); font-weight: 500; margin-top: 5px; }
         .add-btn-wrapper { text-align: center; margin: -5px 0 15px 0; }
         .add-btn { background: #f0f4f8; color: var(--primary-color); border: 1px solid #dce4ec; width: 100%; padding: 12px; border-radius: 10px; font-weight: 700; cursor: pointer; }
-        .calc-btn { background: var(--primary-color); color: white; padding: 16px; border: none; border-radius: 10px; font-size: 17px; font-weight: 700; width: 100%; margin-top: 20px; }
+        .calc-btn { background: var(--primary-color); color: white; padding: 16px; border: none; border-radius: 10px; font-size: 17px; font-weight: 700; width: 100%; margin-top: 20px; cursor: pointer; }
         .remove-btn { position: absolute; top: 12px; right: 12px; background: #fff1f0; color: #ff4d4f; border: none; padding: 5px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; }
         #result { margin-top: 25px; padding: 20px; border-radius: 15px; display: none; }
         .total-val { font-size: 24px; color: var(--primary-color); font-weight: 800; text-align: center; }
@@ -44,7 +44,6 @@
         <div class="add-btn-wrapper">
             <button class="add-btn" onclick="addTransfer()">+ 환승역 추가</button>
         </div>
-
         <div id="transfer-area"></div>
 
         <div class="station-row">
@@ -56,18 +55,21 @@
             <select class="st-line"><option value="">호선 선택</option></select>
         </div>
     </div>
-
     <button class="calc-btn" onclick="calculate()">전체 이동 거리 측정</button>
     <div id="result"></div>
 </div>
 
 <script>
+// 모든 파일 데이터를 통합한 최종 DB
 const subwayData = {
-    "1(경인선)": {"구로":0,"개봉":2.4,"오류동":3.7,"온수":5.6,"역곡":6.9,"부천":9.5,"부평":14.8,"주안":20.4,"인천":26.5},
-    "1(경부선)": {"서울역":0,"용산":3.4,"노량진":5.6,"신길":7.9,"신도림":10.5,"구로":11.6},
-    "2": {"시청":0,"강남":22.5,"신도림":37.3,"구로디지털단지":35.1},
-    "5": {"김포공항":2.1,"신길":15.7,"여의도":16.7,"답십리":32.5},
-    "7": {"노원":5.6,"고속터미널":26.8,"온수":46.9}
+    "1(경인선)": {"서울역":0,"용산":3.4,"노량진":5.6,"대방":7.1,"신길":7.9,"영등포":9.0,"신도림":10.5,"구로":11.6,"구일":13.0,"개봉":14.0,"오류동":15.3,"온수":17.2,"인천":38.1},
+    "2": {"시청":0,"신도림":37.3,"구로디지털단지":35.1,"강남":22.5,"교대":23.7,"잠실":15.9},
+    "3": {"지축":0,"연신내":3.5,"종로3가":13.2,"양재":27.7,"오금":37.7},
+    "3(일산선)": {"삼송":0,"대화":17.8},
+    "4": {"당고개":0,"서울역":19.0,"사당":28.8},
+    "4(과천/안산선)": {"선바위":0,"오이도":38.4},
+    "5": {"김포공항":2.1,"신길":15.7,"여의도":16.7,"종로3가":25.4,"왕십리":30.8,"답십리":32.5,"군자":35.2,"천호":40.2,"오금":45.4},
+    "7": {"노원":5.6,"고속터미널":26.8,"대림":39.1,"온수":46.9}
 };
 
 const stationMap = {};
@@ -82,7 +84,7 @@ function normalizeName(name) {
     let clean = name.trim();
     if (clean.endsWith("역")) clean = clean.substring(0, clean.length - 1);
     if (clean === "서울") return "서울역";
-    if (clean === "오류") return "오류동"; // '오류' 입력 시 '오류동'으로 보정
+    if (clean === "오류") return "오류동"; // 동네 이름 '오류동'으로 보정
     return clean;
 }
 
@@ -123,30 +125,4 @@ function calculate() {
     const lines = document.querySelectorAll('.st-line');
     let total = 0; let log = []; let isError = false;
     const resBox = document.getElementById('result');
-    resBox.style.display = 'block';
-
-    for (let i = 0; i < names.length - 1; i++) {
-        const s = normalizeName(names[i].value);
-        const e = normalizeName(names[i+1].value);
-        const l = lines[i].value;
-        if (!s || !e || !l || !subwayData[l] || subwayData[l][s] === undefined || subwayData[l][e] === undefined) {
-            isError = true; break;
-        }
-        const d = Math.abs(subwayData[l][e] - subwayData[l][s]);
-        total += d;
-        log.push(`📍 ${s} ➡ ${e} (${l}호선) : <b>${d.toFixed(2)}km</b>`);
-    }
-
-    if (isError) {
-        resBox.style.background = "#fff1f0";
-        resBox.style.border = "1px solid #ffa39e";
-        resBox.innerHTML = `<div class="error-val">출발역과 도착역 이름을 확인해주세요!<br>'역'은 제외하고 입력해주세요</div>`;
-    } else {
-        resBox.style.background = "#f0f7ff";
-        resBox.style.border = "1px solid #d6eaff";
-        resBox.innerHTML = `<div class="total-val">총 이동 거리: ${total.toFixed(2)} km</div><div class="detail-log">${log.join('<br>')}</div>`;
-    }
-}
-</script>
-</body>
-</html>
+    resBox.style.display =
