@@ -6,15 +6,18 @@
     <title>지하철 구간 거리 측정기</title>
     <style>
         :root { --primary-color: #0056b3; --bg-color: #f4f7fa; }
-        body { font-family: 'Pretendard', -apple-system, sans-serif; background: var(--bg-color); margin: 0; padding: 15px; color: #333; }
+        body { font-family: 'Pretendard', -apple-system, 'Malgun Gothic', sans-serif; background: var(--bg-color); margin: 0; padding: 15px; color: #333; }
         .container { max-width: 500px; margin: 0 auto; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
         h2 { text-align: center; color: #1a1a1a; margin-bottom: 25px; font-size: 1.6rem; letter-spacing: -1px; }
         .station-row { background: #fdfdfd; padding: 18px; border-radius: 12px; border: 1px solid #edf0f3; margin-bottom: 15px; position: relative; }
         .row-top { display: flex; align-items: center; gap: 12px; }
-        .label { font-weight: 700; width: 60px; color: #555; }
+        .label { font-weight: 700; width: 50px; color: #555; font-size: 0.9rem; }
         .input-group { flex: 1; display: flex; align-items: center; gap: 8px; }
         input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; width: 100%; box-sizing: border-box; outline: none; }
-        select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; background: white; font-size: 15px; margin-top: 10px; }
+        input:focus { border-color: var(--primary-color); }
+        select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; background: white; font-size: 15px; margin-top: 10px; cursor: pointer; }
+        .suffix { font-weight: 600; color: #222; }
+        .hint-text { font-size: 12px; color: var(--primary-color); font-weight: 500; margin-top: 8px; }
         .add-btn-wrapper { text-align: center; margin: -5px 0 15px 0; }
         .add-btn { background: #f0f4f8; color: var(--primary-color); border: 1px solid #dce4ec; width: 100%; padding: 12px; border-radius: 10px; font-weight: 700; cursor: pointer; }
         .calc-btn { background: var(--primary-color); color: white; padding: 16px; border: none; border-radius: 10px; font-size: 17px; font-weight: 700; width: 100%; margin-top: 20px; cursor: pointer; }
@@ -22,6 +25,7 @@
         #result { margin-top: 25px; padding: 20px; border-radius: 15px; display: none; }
         .total-val { font-size: 24px; color: var(--primary-color); font-weight: 800; text-align: center; }
         .error-val { font-size: 17px; color: #ff4d4f; font-weight: 800; text-align: center; line-height: 1.6; }
+        .detail-log { margin-top: 15px; font-size: 14px; color: #555; line-height: 1.8; border-top: 1px dotted #ccc; padding-top: 12px; }
     </style>
 </head>
 <body>
@@ -33,7 +37,7 @@
             <div class="row-top">
                 <span class="label">출발</span>
                 <div class="input-group">
-                    <input type="text" class="st-name" placeholder="'역' 제외 (예: 신도림)" oninput="handleInput(this)">
+                    <input type="text" class="st-name" placeholder="'역' 제외 입력 (예: 온수)" oninput="handleInput(this)">
                     <span class="suffix">역</span>
                 </div>
             </div>
@@ -49,7 +53,7 @@
             <div class="row-top">
                 <span class="label">도착</span>
                 <div class="input-group">
-                    <input type="text" class="st-name" placeholder="'역' 제외 (예: 온수)" oninput="handleInput(this)">
+                    <input type="text" class="st-name" placeholder="'역' 제외 입력 (예: 신길)" oninput="handleInput(this)">
                     <span class="suffix">역</span>
                 </div>
             </div>
@@ -61,19 +65,21 @@
 </div>
 
 <script>
-// 1호선의 모든 지선을 구로역 중심으로 통합한 데이터
+// [통합 데이터] 공유해주신 1~8호선 및 코레일 전 구간 데이터 반영
 const subwayData = {
     "1호선(통합)": {
         "서울역": 0, "시청": 1.1, "종각": 2.1, "종로3가": 2.9, "종로5가": 3.8, "동대문": 4.6, "동묘앞": 5.2, "신설동": 5.9, "제기동": 6.8, "청량리": 7.8,
         "남영": -1.7, "용산": -3.4, "노량진": -5.6, "대방": -7.1, "신길": -7.9, "영등포": -9.0, "신도림": -10.5, "구로": -11.6,
-        "구일": -13.0, "개봉": -14.0, "오류동": -15.3, "온수": -17.2, "역곡": -18.5, "인천": -38.1,
-        "가산디지털단지": -14.0, "독산": -16.0, "금천구청": -17.2, "안양": -24.2, "금정": -28.6, "수원": -42.6, "천안": -97.0
+        "구일": -13.0, "개봉": -14.0, "오류동": -15.3, "온수": -17.2, "역곡": -18.5, "부천": -24.8, "부평": -30.4, "인천": -48.4,
+        "가산디지털단지": -14.0, "안양": -24.2, "수원": -42.6, "천안": -97.0
     },
-    "2": {"시청":0, "신도림":37.3, "구로디지털단지":35.1, "강남":22.5, "교대":23.7, "잠실":15.9, "신설동":54.2},
-    "3": {"지축":0, "연신내":3.5, "종로3가":13.2, "고속터미널":23.4, "오금":37.7},
-    "4": {"당고개":0, "서울역":19.0, "사당":28.8, "오이도":68.8},
-    "5": {"김포공항":2.1, "신길":15.7, "여의도":16.7, "답십리":32.5},
-    "7": {"도봉산":1.4, "노원":5.6, "건대입구":19.0, "고속터미널":26.8, "온수":46.9}
+    "2호선": {"시청":0,"을지로3가":1.5,"잠실":15.9,"강남":22.5,"신도림":37.3,"구로디지털단지":35.1,"홍대입구":43.6},
+    "3호선": {"지축":0,"대화":-17.8,"종로3가":13.2,"고속터미널":23.4,"양재":27.7,"오금":37.7},
+    "4호선": {"당고개":0,"서울역":19.0,"사당":28.8,"금정":42.8,"오이도":68.8},
+    "5호선": {"김포공항":2.1,"영등포구청":13.8,"신길":15.7,"여의도":16.7,"종로3가":25.4,"왕십리":30.8,"답십리":32.5,"오금":45.4},
+    "6호선": {"응암":0,"불광":1.9,"공덕":14.4,"동묘앞":22.9},
+    "7호선": {"노원":5.6,"고속터미널":26.8,"대림":39.1,"온수":46.9},
+    "8호선": {"암사":0,"잠실":4.6,"가락시장":7.4,"모란":17.3}
 };
 
 const stationMap = {};
@@ -100,7 +106,7 @@ function handleInput(input) {
     if (stationMap[stName]) {
         stationMap[stName].forEach(line => {
             const opt = document.createElement('option');
-            opt.value = line; opt.textContent = line + '호선';
+            opt.value = line; opt.textContent = line;
             select.appendChild(opt);
         });
         if (stationMap[stName].length === 1) select.value = stationMap[stName][0];
@@ -137,7 +143,7 @@ function calculate() {
         }
         const d = Math.abs(subwayData[l][e] - subwayData[l][s]);
         total += d;
-        log.push(`📍 ${s} ➡ ${e} (${l}호선) : <b>${d.toFixed(2)}km</b>`);
+        log.push(`📍 ${s} ➡ ${e} (${l}) : <b>${d.toFixed(2)}km</b>`);
     }
 
     if (isError) {
